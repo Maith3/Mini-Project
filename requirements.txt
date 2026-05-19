@@ -12,3 +12,9 @@ fastapi
 uvicorn
 pydantic
 reportlab
+python-jose 
+passlib 
+bcrypt 
+pymongo 
+python-dotenv 
+python-multipart
