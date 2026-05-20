@@ -1,6 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.responses import FileResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 import pandas as pd
 import joblib
 import shap
@@ -8,15 +8,36 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet
 from io import BytesIO
 from reportlab.lib import colors
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from datetime import datetime, timedelta
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from dotenv import load_dotenv
+import os
+from pymongo import MongoClient
+from typing import Optional
 
+load_dotenv()
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
+MONGO_URL = os.getenv("MONGO_URL")
+
+client = MongoClient(MONGO_URL)
+try: 
+    client.admin.command('ping')
+    print('MongoDB Connected Successfully!')
+except Exception as e:
+    print(e)
+
+db = client["cvd_database"]
+users_collection = db['users']
+reports_collection = db['reports']
 
 #Loading saved model
 model = joblib.load('Fmodel.joblib')
 
 explainer = shap.TreeExplainer(model)
-
-#Creating a reference to a fastapi object
-app = FastAPI()
 
 #Input Schema
 class PatientData(BaseModel):
@@ -29,6 +50,138 @@ class PatientData(BaseModel):
     Total_Cholesterol: float
     HDL: float
 
+#Signup model
+class UserSignup(BaseModel):
+    username: str
+    email: EmailStr
+    password: str
+    role: str
+    hospitalName: str
+    HP_ID: str 
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    username: Optional[str] = None 
+
+class User(BaseModel):
+    username: str
+    email: EmailStr
+    disabled: bool = False
+    verified: bool = False
+    
+class UserInDB(User):
+    hashed_password: str
+
+pwd_context = CryptContext(schemes=['bcrypt'],deprecated='auto')
+oauth_2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+#Creating a reference to a fastapi object
+app = FastAPI()
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password,hashed_password)
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+def get_user(users_collection, username: str):
+    user_data = users_collection.find_one({"username": username})
+    
+    if user_data:
+        return UserInDB(**user_data)
+    
+    return None
+
+def authenticate_user(users_collection, username: str, password: str):
+    user = get_user(users_collection,username)
+    if not user:
+        return False
+    if not verify_password(password, user.hashed_password):
+        return False
+    return user
+
+def create_access_token(data:dict, expires_delta: Optional[timedelta]=None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp":expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+async def get_current_user(token: str = Depends(oauth_2_scheme)):
+    credential_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials",
+                                        headers={"WWW-Authenticate":"Bearer"})
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credential_exception
+        token_data = TokenData(username=username)  
+    except JWTError:
+        raise credential_exception
+    user = get_user(users_collection, username=token_data.username)
+    if user is None:
+        raise credential_exception
+    return user
+
+async def get_current_active_user(current_user:UserInDB = Depends(get_current_user)):
+    if current_user.disabled:
+        raise HTTPException(status_code=400, detail="Inactive User")
+    if not current_user.verified:
+        raise HTTPException(status_code=403, detail="User not verified yet")
+    return current_user
+        
+
+@app.post("/signup")
+async def signup(user:UserSignup):
+    existing_user = users_collection.find_one(
+        {"username": user.username}
+    )
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="Username already exists"
+        )
+    existing_email = users_collection.find_one(
+        {"email": user.email}
+    )
+    
+    if existing_email:
+        raise HTTPException(
+            status_code=400,
+            detail="Email already registered"
+        )
+    hashed_password = get_password_hash(user.password)
+    
+    user_data = {
+        "username": user.username,
+        "email": user.email,
+        "hashed_password": hashed_password,
+        "role": user.role,
+        "hospitalName": user.hospitalName,
+        "HP_ID": user.HP_ID,
+        "disabled": False,
+        "verified": False
+    }
+    users_collection.insert_one(user_data)
+    return {"message": "User created successfully"
+    }
+    
+@app.post("/token", response_model=Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = authenticate_user(users_collection, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Incorrect username or password",
+                            headers={"WWW-Authenticate":"Bearer"})
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(data={"sub":user.username}, expires_delta=access_token_expires)
+    return {"access_token":access_token,"token_type":"bearer"}
+
 #Home route
 @app.get("/")
 def home():
@@ -36,7 +189,7 @@ def home():
 
 #Prediction route
 @app.post("/predict")
-def predict(data: PatientData):
+async def predict(data: PatientData, current_user: User=Depends(get_current_active_user)):
     #Converting input to dataframe
     input_data = pd.DataFrame([{
         "BMI": data.BMI,
@@ -180,7 +333,7 @@ def get_parameter_table(data):
         status['BMI'] = 'Normal'
     elif data.BMI <30:
         status['BMI'] = 'Overweight'
-    elif data.BMI>30:
+    elif data.BMI>=30:
         status['BMI'] = 'Obese'
         
     #Systolic BP
@@ -208,7 +361,7 @@ def get_parameter_table(data):
         status['Estimated_LDL'] = 'Borderline High'
     elif data.Estimated_LDL < 190:
         status['Estimated_LDL'] = 'High'
-    elif data.Estimated_LDL > 190:
+    elif data.Estimated_LDL >= 190:
         status['Estimated_LDL'] = 'Very High'
     
     #Total Cholesterol

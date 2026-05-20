@@ -14,7 +14,9 @@ pydantic
 reportlab
 python-jose 
 passlib 
-bcrypt 
+bcrypt==4.0.1
 pymongo 
 python-dotenv 
 python-multipart
+typing
+pydantic[email]
