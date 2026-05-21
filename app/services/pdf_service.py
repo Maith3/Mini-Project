@@ -20,7 +20,8 @@ def generatePdf(risk_category, data, prediction, sorted_features):
     text = Paragraph('CVD Risk Report', styles['Title'])
     elements.append(text)
     text = Paragraph(f"<br/><br/><br/>Patient Name: {data.Name}<br/>"
-            f"Patient ID: {data.PID}",
+            f"Patient ID: {data.PID}<br/>"
+            f"Patient Age: {data.Age}<br/>",
             styles['Heading2']
             )
     """return FileResponse(

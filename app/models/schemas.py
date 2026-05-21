@@ -5,6 +5,7 @@ from typing import Optional
 class PatientData(BaseModel):
     Name: str
     PID: int
+    Age: int
     BMI: float
     Systolic_BP: float
     Diabetes_Status: int
