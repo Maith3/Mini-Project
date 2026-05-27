@@ -20,3 +20,4 @@ python-dotenv
 python-multipart
 typing
 pydantic[email]
+fastapi-mail

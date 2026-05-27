@@ -8,6 +8,15 @@ from datetime import timedelta
 from fastapi.security import OAuth2PasswordRequestForm
 from app.services.auth_service import authenticate_user
 from fastapi import APIRouter
+from app.models.schemas import (
+    ForgotPasswordRequest,
+    ResetPasswordRequest
+)
+
+from app.services.auth_service import (
+    forgot_password_service,
+    reset_password_service
+)
 
 router = APIRouter()
 
@@ -55,3 +64,19 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(data={"sub":user.username}, expires_delta=access_token_expires)
     return {"access_token":access_token,"token_type":"bearer"}
+
+@router.post("/forgot-password")
+async def forgot_password(data: ForgotPasswordRequest):
+
+    return await forgot_password_service(data.email)
+
+
+@router.post("/reset-password")
+async def reset_password(data: ResetPasswordRequest):
+
+    return await reset_password_service(
+        data.email,
+        data.otp,
+        data.new_password
+    )
+

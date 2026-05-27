@@ -38,3 +38,12 @@ class User(BaseModel):
     
 class UserInDB(User):
     hashed_password: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    otp: str
+    new_password: str
