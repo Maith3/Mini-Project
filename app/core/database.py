@@ -1,12 +1,10 @@
 from pymongo import MongoClient
 from app.core.config import MONGO_URL
 
-client = MongoClient(MONGO_URL)
-try: 
-    client.admin.command('ping')
-    print('MongoDB Connected Successfully!')
-except Exception as e:
-    print(e)
+client = MongoClient(
+    MONGO_URL,
+    serverSelectionTimeoutMS=3000
+)
 
 db = client["cvd_database"]
 users_collection = db['users']
