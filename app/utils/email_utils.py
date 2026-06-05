@@ -26,14 +26,4 @@ async def send_otp_email(email: str, otp: str):
 
     fm = FastMail(conf)
     await fm.send_message(message)
-
-async def send_reset_email(email: EmailStr, reset_link: str):
-    message = MessageSchema(
-        subject="Password Reset Request",
-        recipients=[email],
-        body=f"Click the link to reset your password:\n\n{reset_link}",
-        subtype="plain"
-    )
-
-    fm = FastMail(conf)
-    await fm.send_message(message)
+    

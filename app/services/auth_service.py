@@ -79,9 +79,7 @@ async def forgot_password_service(email: str):
 
     await send_otp_email(email, otp)
 
-    return {
-        "message": "OTP sent successfully"
-    }
+    return{"OTP sent successfully"}
 
 
 # ======================================
