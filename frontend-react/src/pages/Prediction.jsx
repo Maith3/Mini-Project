@@ -52,7 +52,8 @@ function Prediction() {
       );
 
       if (!response.ok) {
-        throw new Error("Prediction Failed");
+        const errorData = await response.json();
+        alert(Error(errorData.detail));
       }
 
       // Receive PDF
@@ -71,11 +72,10 @@ function Prediction() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(pdfUrl);
 
-      setResult("Prediction Generated & PDF Downloaded Successfully");
+      alert("Prediction report generated successfully.");
     } catch (error) {
       console.error(error);
-      setResult("Prediction Failed");
-      alert("Prediction Failed");
+      alert(error.message);
     }
   };
 

@@ -105,7 +105,7 @@ function Login() {
           onChange={handleChange}
         />
 
-        <a href="#">
+        <a href="/forgot-password">
           Forgot Password?
         </a>
 
