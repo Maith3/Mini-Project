@@ -1,7 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-    <title>CardioPredict</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CardioPredict Login</title>
+
     <link rel="stylesheet" href="css/style.css">
 </head>
 
@@ -11,43 +15,61 @@
 
     <div class="card">
 
-        <h1>❤️ CardioPredict</h1>
+        <h1>CardioPredict</h1>
 
-        <h2>CVD Risk Prediction</h2>
+        <h2>Login Form</h2>
 
-        <input type="text" id="Name" placeholder="Patient Name">
+        <div class="switch">
 
-        <input type="number" id="PID" placeholder="Patient ID">
+            <button class="active">
+                Login
+            </button>
 
-        <input type="number" id="Age" placeholder="Age">
+            <button onclick="window.location.href='signup.html'">
+                Signup
+            </button>
 
-        <input type="number" id="BMI" placeholder="BMI">
+        </div>
 
-        <input type="number" id="Systolic_BP" placeholder="Systolic BP">
+        <input
+            type="text"
+            id="username"
+            placeholder="Username">
 
-        <input type="number" id="Diabetes_Status" placeholder="Diabetes Status (0/1)">
+        <input
+            type="password"
+            id="password"
+            placeholder="Password">
 
-        <input type="number" id="Estimated_LDL" placeholder="Estimated LDL">
-
-        <input type="number" id="Total_Cholesterol" placeholder="Total Cholesterol">
-
-        <input type="number" id="HDL" placeholder="HDL">
+        <a href="#">
+            Forgot Password?
+        </a>
 
         <button
-            class="submit-btn"
-            id="predictBtn">
+            id="loginBtn"
+            class="submit-btn">
 
-            Predict Risk
+            Login
 
         </button>
 
-        <div id="result"></div>
+        <p class="signup-text">
+
+            Not a member?
+
+            <a href="signup.html">
+
+                Signup Now
+
+            </a>
+
+        </p>
 
     </div>
 
 </div>
 
-<script src="js/prediction.js"></script>
+<script src="js/login.js"></script>
 
 </body>
 </html>

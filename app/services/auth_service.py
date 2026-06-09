@@ -11,7 +11,7 @@ from app.core.security import (
     verify_reset_token,
     get_password_hash
 )
-from app.utils.email_utils import send_reset_email, send_otp_email
+from app.utils.email_utils import send_otp_email
 import random
 from datetime import timedelta, datetime
 
